@@ -1,3 +1,4 @@
+; -*- asm -*-
 ;; Much of this was stolen from http://board.flatassembler.net/topic.php?t=93
 ; --- Tomasz's useful macro: 
 macro struct name 

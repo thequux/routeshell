@@ -4,6 +4,14 @@ iodata:
 .col	db	0
 .color	db	0x1F 		;bg[BGRI]fg[BGRI] -- blue bg, white fg
 iodata.vga	equ	0xB8000
+
+delay:
+	push	ECX
+	mov	ECX, 0x200000
+	@@: NOP
+	LOOP	@b
+	POP	ECX
+	RET
 	
 ioputcraw:
 	;; Place a character in raw mode.
@@ -93,24 +101,42 @@ ioputstr:
 	MOV	EBP, ESP
 	PUSH	EAX, EBX, ECX, EDX, ESI
 	
-	MOVZX	ECX, [iodata.row]
-	MOVZX	EBX, [iodata.col]
 	MOV	ESI, [EBP+8]
 	SUB	ESP, 12
-.nchr:	MOV	[ESP], EBX
+
+.resume:
+	MOVZX	ECX, [iodata.row]
+	MOVZX	EBX, [iodata.col]
+.nchr:  ;CALL 	delay
+	MOV	[ESP], EBX
 	MOV	[ESP+4], ECX
 	LODS	byte [ESI]
 	TEST	AL, AL
 	JZ	.end
+	CMP	AL, 0x0d
+	JZ	.cr
+	CMP	AL, 0x0a
+	JZ	.lf
 	MOVZX	EAX, AL
 	MOV	[ESP+8], EAX
 	;; TODO: Handle newline, tab
 	CALL	ioputcraw
+	CALL	iosetcur
 	INC	EBX
 	CMP	EBX, 80
 	JL	.nchr
 	INC	ECX
 	XOR	EBX, EBX
+	JMP	.nchr
+.cr:	XOR	EBX, EBX
+	JMP	.nchr
+.lf:	INC	ECX
+	CMP	ECX, 25
+	JL	.nchr
+	PUSH	dword 1
+	CALL	ioscroll
+	ADD	ESP, 4
+	DEC	ECX
 	JMP	.nchr
 .end:	CALL	iosetcur
 	ADD	ESP, 12
@@ -118,5 +144,29 @@ ioputstr:
 	POP	EBX
 	RET
 	
-	
-	
+ioscroll:
+	;; Scroll display
+	;; arg: number of lines
+	CLD
+	PUSH	EBP
+	MOV	EBP, ESP
+	PUSH	EAX, ECX, ESI, EDI
+
+	MOV	ECX, [EBP+8]
+	IMUL	ECX, 80	
+	PUSH	ECX		; ECX contains number of words delta
+	LEA	ESI, [iodata.vga + ECX * 2]
+	MOV	EDI, iodata.vga
+	NEG	ECX
+	ADD	ECX, 25 * 80
+@@:	LODS	word [ESI]
+	STOS	word [EDI]
+	LOOP	@b
+	POP	ECX
+	MOV	AH, [iodata.color]
+	MOV	AL, 0x20
+	REP STOSW
+
+	POP	EAX, ECX, ESI, EDI
+	POP	EBP
+	RET

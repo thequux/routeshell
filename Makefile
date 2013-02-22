@@ -1,10 +1,10 @@
 includes = util.inc multiboot.inc io.inc
 
-kernel.bin kernel.fas: kernel.s $(includes)
-	./fasm/fasm -s kernel.fas kernel.s kernel.bin
+all: kernel.bin
 
-#kernel.lst: kernel.fas
-#	./fasm/listing kernel.fas kernel.lst
+kernel.lst kernel.bin kernel.fas: kernel.s $(includes)
+	./fasm/fasm -s kernel.fas kernel.s kernel.bin
+	./fasm/listing -b 8 kernel.fas kernel.lst
 
 run: kernel.bin
 	qemu -kernel kernel.bin -debugcon vc

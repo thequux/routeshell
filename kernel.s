@@ -9,7 +9,7 @@ _img_start:
 
 VGA equ 0xB8000
 ;;; Entry point
-_start:	
+_start:
 	cmp	eax,0x2BADB002
 	JNZ	boot_failed
 	MOV	ESI, EBX
@@ -26,6 +26,7 @@ _start:
 	CALL	iocls
 	PUSH	TEST_STR
 	CALL	ioputstr
+	ADD	ESP, 4
 	;; MOV	word [VGA], 0x1F41
 	CLI
 @@:	HLT
